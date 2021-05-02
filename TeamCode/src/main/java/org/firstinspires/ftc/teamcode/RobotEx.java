@@ -22,12 +22,20 @@ import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import static java.lang.Math.PI;
 import static java.lang.Math.cos;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 
-public class RobotEx extends Robot {
+public class RobotEx /*extends Robot*/ {
 
+
+    public OpModeAddition opMode = null;
+    public Telemetry debug = null;
+    public BNO055IMU gyro = null;
+
+    public double posX = 0, posY = 0;
+    public double ang = 90;
     // Motoare pentru Movement
     public DcMotorEx motorRB = null;
     public DcMotorEx motorRF = null;
@@ -111,6 +119,7 @@ public class RobotEx extends Robot {
 
         this.motorLB.setDirection(DcMotorSimple.Direction.REVERSE);
         this.motorLF.setDirection(DcMotorSimple.Direction.REVERSE);
+
         this.motorLauncher.setDirection(DcMotor.Direction.REVERSE);
         this.motorArm.setDirection(DcMotor.Direction.REVERSE);
 
@@ -138,7 +147,13 @@ public class RobotEx extends Robot {
     public void stopLauncher() {
         this.motorLauncher.setPower(0);
     }
-
+    public int ki(double iRatio)
+    {
+        double reductie = iRatio*1.5;
+        double coutPerRev = 28;
+        double wheelDiam = 4.0 * 2.54;
+        return (int)((reductie * coutPerRev) / (wheelDiam * 3.14));
+    }
     // Functie de intake
     public void startIntake() {
         this.motorIntake.setPower(1);
@@ -204,7 +219,10 @@ public class RobotEx extends Robot {
         return  w;
 
     }
-
+    public int cmToEncoder(double x)
+    {
+        return (int)x*100/77;
+    }
     public int targetOfW(double w, double wm, double x, double y)
     {
         return (int)((w/wm*this.cmToEncoder(sqrt(x*x + y*y)))*1.065);
@@ -227,7 +245,60 @@ public class RobotEx extends Robot {
 
         return w;
     }
+    public void slideEncoder(int Target, double Speed)
+    {
+        Target = (int)(Target * ki(13.7));
+        if(Target < 0) Speed = Speed*(-1);
 
+        this.motorLB.setTargetPosition(this.motorLB.getCurrentPosition() - Target);
+        this.motorRB.setTargetPosition(this.motorRB.getCurrentPosition() + Target);
+        this.motorLF.setTargetPosition(this.motorLF.getCurrentPosition() + Target);
+        this.motorRF.setTargetPosition(this.motorRF.getCurrentPosition() - Target);
+
+        this.motorRB.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        this.motorLB.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        this.motorRF.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        this.motorLF.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        this.motorRF.setPower(Speed);
+        this.motorRB.setPower(-Speed);
+        this.motorLF.setPower(-Speed);
+        this.motorLB.setPower(Speed);
+
+        while(this.motorLB.isBusy() && this.motorRB.isBusy() && this.motorLF.isBusy() && this.motorRF.isBusy() && opMode.isOpModeIsActive()){
+
+            debug.addData("right_encoder_front", this.motorRF.getCurrentPosition());
+            debug.addData("right_encoder_back", this.motorRB.getCurrentPosition());
+            debug.addData("left_motor_back", this.motorLB.getCurrentPosition());
+            debug.addData("left_motor_front", this.motorLF.getCurrentPosition());
+            debug.addData("target", this.motorLB.getTargetPosition());
+            debug.update();
+        }
+
+        mortusMotorus();
+
+        this.motorLF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        this.motorRF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        this.motorLB.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        this.motorRB.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        this.motorLF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        this.motorRF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        this.motorLB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        this.motorRB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    }
+
+    public void slideOnCM(int t, double s)
+    {
+
+        this.slideEncoder(t*100/70,s);
+    }
+    public void driveOnCM(int t, double s)
+    {
+        this.posY += sin(this.ang * PI/180) * t;
+        this.posX += cos(this.ang * PI/180) * t;
+        this.drive(this.cmToEncoder(t),-1*s);
+    }
     public double[] getForce(double w1,double w2, double w3, double w4){
         double[] f = new double[3];
 
@@ -345,7 +416,7 @@ public class RobotEx extends Robot {
         time.reset();
         double delay = time.milliseconds();
 
-        while(this.getAngle() > 90)
+        while(this.getAng3() > 90)
         {
             while (delay < time.milliseconds()) {
 
@@ -541,7 +612,19 @@ public class RobotEx extends Robot {
         this.posY += y;
     }
 
-    @Override
+    public void mortusMotorus()
+    {
+        this.motorLB.setPower(0);
+        this.motorRF.setPower(0);
+        this.motorLF.setPower(0);
+        this.motorRB.setPower(0);
+
+        this.motorLF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        this.motorRF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        this.motorLB.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        this.motorRB.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    }
+
     public void drive(int Target, double Speed)
     {
         Target = (int)(Target * ki(13.7));
