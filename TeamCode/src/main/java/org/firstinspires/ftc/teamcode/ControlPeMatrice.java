@@ -50,40 +50,46 @@ public class ControlPeMatrice extends LinearOpMode implements OpModeAddition {
         boolean in = false;
         boolean out = false;
 
+        double left_nigger = gamepad2.left_trigger;
+        double right_nigger = gamepad2.right_trigger;
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()){
 
             // Left-Bumper Activity - Use of the motorIntake (the Intake Motor)
-            if (gamepad2.left_bumper) {
+            /*if (gamepad2.left_bumper) {
                 in = !in;
                 while (gamepad2.left_bumper) {
                 }
-            }
+            }*/
 //{            } else if (gamepad2.left_bumper && robot.motorIntake.getPower() == 1) {
 //                robot.motorIntake.setPower(0);
 //            }
-            if (gamepad2.right_bumper) {
+            /*if (gamepad2.right_bumper) {
                 out = !out;
                 while (gamepad2.right_bumper) {
                 }
-            }
+            }*/
+
+
+
+
             if (gamepad2.dpad_up)
             {
                 robot.arm(-300);
             }
             else if (gamepad2.dpad_down)
             {
-                robot.arm(300);
-            }
-            if(gamepad2.dpad_right)
-            {
-                robot.servoArm.setPosition(Servo.MAX_POSITION);
-            }else if(gamepad2.dpad_left){
-                robot.servoArm.setPosition(0.5);
+                robot.arm(600);
             }
 
-            robot.motorLauncher.setVelocity(btoi(out)*100,AngleUnit.RADIANS);
-            robot.motorIntake.setVelocity(btoi(in)*100,AngleUnit.RADIANS);
+            if(gamepad2.dpad_right) {
+                robot.servoArm.setPosition(0.6);
+            }else if(gamepad2.dpad_left){
+                robot.servoArm.setPosition(0.3);
+            }
+
+            robot.motorLauncher.setVelocity(btoi(gamepad2.right_bumper)*100,AngleUnit.RADIANS);
+            robot.motorIntake.setVelocity(btoi(gamepad2.left_bumper)*100,AngleUnit.RADIANS);
             // Right-Bumper Activity - Use of the motorLauncher (the Launch Motor)
 //            if (gamepad2.right_bumper && robot.motorLauncher.getPower() == 1) {
 //                robot.motorLauncher.setPower(1);

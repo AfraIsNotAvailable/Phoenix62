@@ -88,6 +88,8 @@ public class RobotEx /*extends Robot*/ {
         motorArm = h.get(DcMotorEx.class, "motorArm");
         servoArm = h.get(Servo.class,"servoArm");
         //servoWobble = h.get(Servo.class, "servoWobble");
+        servoArm.setDirection(Servo.Direction.REVERSE);
+
 
         mCont = (DcMotorControllerEx)this.motorRB.getController();
 
