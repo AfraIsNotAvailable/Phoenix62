@@ -27,16 +27,10 @@ public class AutonomTurnTest extends LinearOpMode implements OpModeAddition {
 
         robot =  new RobotEx(hardwareMap,this,telemetry);
         waitForStart();
-        for(int i = 0; i <= 360/15; ++i)
-        {
-            robot.move(90 + 15 * i,100,40);
-            sleep(500);
-            robot.move(90 + 15 * i,-100,40);
-        }
 
+        robot.move(90,185,18);
+        robot.move(270, 5, 18);
 
-
-        sleep(1000);
   //      robot.setVelocity(0,-30*10/34,10000/3);
 //        robot.setVelocity( 0,20,5000);
 
@@ -59,7 +53,7 @@ public class AutonomTurnTest extends LinearOpMode implements OpModeAddition {
 
 
             
-            telemetry.update();
+         //   telemetry.update();
        // }
         // run until the end of the match
         // (driver presses STOP)

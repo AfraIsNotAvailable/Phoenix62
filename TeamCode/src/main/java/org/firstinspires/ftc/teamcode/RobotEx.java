@@ -14,6 +14,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
@@ -69,6 +70,7 @@ public class RobotEx /*extends Robot*/ {
     public double maxRPM = 435;
     public double robotRadius = 29; // Thought Experiment: Daca inscri robotul intr-un cerc, obti raza asta - folosita de matematica complicata a lui Croi
     BNO055IMU.Parameters parameters; // Never used outside of functions - created, initialized and used inside the Robot constructor for example
+    private int armpos = 1;
 
     public RobotEx(HardwareMap h, OpModeAddition om, Telemetry t) {
         this.opMode = om;
@@ -90,6 +92,7 @@ public class RobotEx /*extends Robot*/ {
         //servoWobble = h.get(Servo.class, "servoWobble");
         servoArm.setDirection(Servo.Direction.REVERSE);
 
+       // motorLauncher.setCurrentAlert(9200, CurrentUnit.MILLIAMPS);
 
         mCont = (DcMotorControllerEx)this.motorRB.getController();
 
@@ -122,8 +125,9 @@ public class RobotEx /*extends Robot*/ {
         this.motorLB.setDirection(DcMotorSimple.Direction.REVERSE);
         this.motorLF.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        this.motorLauncher.setDirection(DcMotor.Direction.REVERSE);
-        this.motorArm.setDirection(DcMotor.Direction.REVERSE);
+        this.motorLauncher.setDirection(DcMotor.Direction.FORWARD);
+        this.motorArm.setDirection(DcMotor.Direction.FORWARD);
+
 
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
 
@@ -142,9 +146,16 @@ public class RobotEx /*extends Robot*/ {
         while(opMode.isOpModeIsActive() && !gyro.isGyroCalibrated() && !gyro2.isGyroCalibrated()){ }
     }
 
+    public void setSpeed(double speed) {
+        this.motorRB.setPower(speed);
+        this.motorRF.setPower(speed);
+        this.motorLB.setPower(speed);
+        this.motorLF.setPower(speed);
+    }
+
     // Functie de launch
-    public void startLauncher() {
-        this.motorLauncher.setPower(1);
+    public void startLauncher(double pow) {
+        this.motorLauncher.setPower(pow);
     }
     public void stopLauncher() {
         this.motorLauncher.setPower(0);
@@ -193,6 +204,20 @@ public class RobotEx /*extends Robot*/ {
     }
 
     public double radsToMS(double rads){ return this.robotRadius * rads;  }
+
+    public void grab(){
+        this.servoArm.setPosition(0);
+        sleep(1100);
+    }
+    public void drop(){
+        this.servoArm.setPosition(0.50);
+        sleep(1100);
+    }
+    public void shoot(double t){
+        this.startIntake();
+        sleep(t);
+        this.stopIntake();
+    }
 
     public double[] vecRotate(double x, double y, double theta)
     {
@@ -944,7 +969,7 @@ public class RobotEx /*extends Robot*/ {
 
     public void patinaj(double ang, double dist, double speed,double rspeed)
     {
-
+        this.episkey();
         double[] f = vecRotate(0 ,speed , 0);
         if(dist > 0) {
             ElapsedTime elapsedTime = new ElapsedTime();
@@ -970,6 +995,8 @@ public class RobotEx /*extends Robot*/ {
             this.posX -= f[0];
             this.posY -= f[1];
         }
+
+        this.sectumsempera();
     }
 
     public void arm(int pos) {
@@ -986,7 +1013,22 @@ public class RobotEx /*extends Robot*/ {
             //}
         //}
       //  motorArm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        while (opMode.isOpModeIsActive() && motorArm.isBusy()){}
-        motorArm.setMotorDisable();
+//        while (opMode.isOpModeIsActive() && motorArm.isBusy()){}
+      //  motorArm.setMotorDisable();
+//        motorArm.setPower(0);
     }
+    public void arm() {
+       if(this.armpos == 1){
+            this.motorArm.setPower(0.25);
+            pause(1000/2);
+           this.motorArm.setPower(0);
+            this.armpos = 0;
+       }else{
+           this.motorArm.setPower(-0.35);
+           pause(1000/2);
+           this.motorArm.setPower(0);
+            this.armpos = 1;
+       }
+    }
+
 }
