@@ -222,6 +222,39 @@ public class AutonomKakegurui extends LinearOpMode implements OpModeAddition{
                 robot.slideOnCM(110,0.9);
                 break;
             }
+
+            default:{
+                telemetry.addData("caz", 2);
+                telemetry.update();
+
+//                robot.setSpeed(0.7);
+//                sleep( 3350);
+//             //   robot.slide(true, 0.4);
+//                sleep(1500);
+//                //robot.mortusMotorus();
+//                //sleep(100);
+//                //robot.setSpeed(0.7);
+//                //sleep(200);
+//                robot.setSpeed(-0.9);
+//                sleep(550);
+//                robot.mortusMotorus();
+//                //robot.driveOnFunction(robot.tatamiToEuler2(-0.7));
+//                //robot.goTo(65,232);
+                robot.driveOnFunction(robot.CMtoEuler(-240));
+                robot.curveNoGyro(-90,0.6);
+                // robot.driveOnCM(-45,0.5);
+                //robot.turnNoGyro(90, 0.6);
+                robot.curveNoGyro(-90,-0.6);
+                robot.driveOnCM(-233, 0.8);
+                robot.slideOnCM(-78, 0.6);
+                robot.driveOnCM(12, 0.25);
+                robot.driveOnCM(200,0.8);
+                robot.curveNoGyro(30,0.6);
+                robot.curveNoGyro(30,-0.6);
+                robot.driveOnCM(-10,0.7);
+
+                break;
+            }
         }
 
         if (tfod != null) {

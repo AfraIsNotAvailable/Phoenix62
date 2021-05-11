@@ -1,6 +1,7 @@
-package org.firstinspires.ftc.teamcode;
+ package org.firstinspires.ftc.teamcode;
 
 import com.qualcomm.hardware.bosch.BNO055IMU;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorControllerEx;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -10,29 +11,46 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
+import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
 import org.firstinspires.ftc.robotcore.external.navigation.Velocity;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackable;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackables;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import static java.lang.Math.PI;
 import static java.lang.Math.cos;
+import static java.lang.Math.exp;
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
-
+import static org.firstinspires.ftc.robotcore.external.navigation.AngleUnit.DEGREES;
+import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XYZ;
+import static org.firstinspires.ftc.robotcore.external.navigation.AxesOrder.XZY;
+import static org.firstinspires.ftc.robotcore.external.navigation.AxesReference.EXTRINSIC;
 public class RobotEx /*extends Robot*/ {
 
 
+    private static final String VUFORIA_KEY = "AbJRubT/////AAABma6KEOwi/UjmpKjNKZN3/NWMSd1P03DjYNZUmfA4zeI/6iDpgj7s7Xvujkc5tKEYP4QwNmtgXUf2kml1Nb0Pozf+iAxWwM+CPmCTFYks5fp0ckAtACUxtCCOluwQCn5NlU8vgBHwBNeVis+2j/26tO8B2Lh1bNz/RZLK9jbIVCQVQRPPAZ2+IpBPQogX3Dc5I4jktld7zcoTEOV1a7y+0sV006TBpV0KnanLQwXyZfDDfjNC1xDsladUdQ35JHU5N2fEwDOnWC7DLAZNU7UgLIPUH1EoHUbbilp4K5HrDqk4SYovwrEeHWccA9tzIE2oT4vsejcEQ99zFVa5+MhQhWKJSBnUTWj696jXeCNwrbm/";
     public OpModeAddition opMode = null;
     public Telemetry debug = null;
     public BNO055IMU gyro = null;
+ //   public ColorSensor colorSensor = null;
 
     public double posX = 0, posY = 0;
     public double ang = 90;
@@ -69,6 +87,24 @@ public class RobotEx /*extends Robot*/ {
     public double maxRPM = 435;
     public double robotRadius = 29; // Thought Experiment: Daca inscri robotul intr-un cerc, obti raza asta - folosita de matematica complicata a lui Croi
     BNO055IMU.Parameters parameters; // Never used outside of functions - created, initialized and used inside the Robot constructor for example
+    private int armpos = 1;
+
+    private static final float mmPerInch        = 25.4f;
+    private static final float mmTargetHeight   = (6) * mmPerInch;          // the height of the center of the target image above the floor
+    private static final float halfField = 72 * mmPerInch;
+    private static final float quadField  = 36 * mmPerInch;
+
+    private OpenGLMatrix lastLocation = null;
+    private VuforiaLocalizer vuforia = null;
+
+    WebcamName webcamName = null;
+
+    private boolean targetVisible = false;
+    private float phoneXRotate    = 0;
+    private float phoneYRotate    = 0;
+    private float phoneZRotate    = 0;
+
+    public List<VuforiaTrackable> allTrackables;
 
     public RobotEx(HardwareMap h, OpModeAddition om, Telemetry t) {
         this.opMode = om;
@@ -87,7 +123,11 @@ public class RobotEx /*extends Robot*/ {
         motorIntake = h.get(DcMotorEx.class,"motorIntake");
         motorArm = h.get(DcMotorEx.class, "motorArm");
         servoArm = h.get(Servo.class,"servoArm");
+      //  colorSensor = h.get(ColorSensor.class,"color");
         //servoWobble = h.get(Servo.class, "servoWobble");
+        servoArm.setDirection(Servo.Direction.REVERSE);
+
+        motorLauncher.setDirection(DcMotorEx.Direction.FORWARD);
 
         mCont = (DcMotorControllerEx)this.motorRB.getController();
 
@@ -120,8 +160,8 @@ public class RobotEx /*extends Robot*/ {
         this.motorLB.setDirection(DcMotorSimple.Direction.REVERSE);
         this.motorLF.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        this.motorLauncher.setDirection(DcMotor.Direction.REVERSE);
-        this.motorArm.setDirection(DcMotor.Direction.REVERSE);
+       // this.motorLauncher.setDirection(DcMotor.Direction.REVERSE);
+        this.motorArm.setDirection(DcMotor.Direction.FORWARD);
 
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
 
@@ -137,12 +177,79 @@ public class RobotEx /*extends Robot*/ {
 
         gyro2.initialize(parameters);
 
+       /* webcamName = h.get(WebcamName.class, "Webcam 1");
+
+        int cameraMonitorViewId = h.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", h.appContext.getPackageName());
+        VuforiaLocalizer.Parameters vparameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
+
+        // VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
+
+        vparameters.vuforiaLicenseKey = VUFORIA_KEY;
+
+
+        vparameters.cameraName = webcamName;
+
+        // Make sure extended tracking is disabled for this example.
+        vparameters.useExtendedTracking = false;
+
+        //  Instantiate the Vuforia engine
+        vuforia = ClassFactory.getInstance().createVuforia(vparameters);
+
+        VuforiaTrackables targetsUltimateGoal = this.vuforia.loadTrackablesFromAsset("UltimateGoal");
+        VuforiaTrackable redTowerGoalTarget = targetsUltimateGoal.get(1);
+        redTowerGoalTarget.setName("Red Tower Goal Target");//asta
+        VuforiaTrackable redAllianceTarget = targetsUltimateGoal.get(2);
+        redAllianceTarget.setName("Red Alliance Target");//asta
+        VuforiaTrackable blueAllianceTarget = targetsUltimateGoal.get(3);
+        blueAllianceTarget.setName("Blue Alliance Target");//asta
+        VuforiaTrackable frontWallTarget = targetsUltimateGoal.get(4);
+        frontWallTarget.setName("Front Wall Target");//asta
+
+        allTrackables = new ArrayList<VuforiaTrackable>();
+        allTrackables.addAll(targetsUltimateGoal);
+
+        redAllianceTarget.setLocation(OpenGLMatrix
+                .translation(0, -halfField, mmTargetHeight)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 180)));
+
+        blueAllianceTarget.setLocation(OpenGLMatrix
+                .translation(0, halfField, mmTargetHeight)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 0)));
+        frontWallTarget.setLocation(OpenGLMatrix
+                .translation(-halfField, 0, mmTargetHeight)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, 90)));
+
+        // The tower goal targets are located a quarter field length from the ends of the back perimeter wall.
+        redTowerGoalTarget.setLocation(OpenGLMatrix
+                .translation(halfField, -quadField, mmTargetHeight)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XYZ, DEGREES, 90, 0, -90)));
+
+
+        final float CAMERA_FORWARD_DISPLACEMENT  = 4.0f * mmPerInch;   // eg: Camera is 4 Inches in front of robot-center
+        final float CAMERA_VERTICAL_DISPLACEMENT = 8.0f * mmPerInch;   // eg: Camera is 8 Inches above ground
+        final float CAMERA_LEFT_DISPLACEMENT     = 0;     // eg: Camera is ON the robot's center line
+
+        OpenGLMatrix cameraLocationOnRobot = OpenGLMatrix
+                .translation(CAMERA_FORWARD_DISPLACEMENT, CAMERA_LEFT_DISPLACEMENT, CAMERA_VERTICAL_DISPLACEMENT)
+                .multiplied(Orientation.getRotationMatrix(EXTRINSIC, XZY, DEGREES, 90, 90, 0));
+
+        for (VuforiaTrackable trackable : allTrackables) {
+            ((VuforiaTrackableDefaultListener) trackable.getListener()).setCameraLocationOnRobot(vparameters.cameraName, cameraLocationOnRobot);
+        }
+        targetsUltimateGoal.activate();*/
         while(opMode.isOpModeIsActive() && !gyro.isGyroCalibrated() && !gyro2.isGyroCalibrated()){ }
     }
 
+    public void setSpeed(double speed) {
+        this.motorRB.setPower(speed);
+        this.motorRF.setPower(speed);
+        this.motorLB.setPower(speed);
+        this.motorLF.setPower(speed);
+    }
+
     // Functie de launch
-    public void startLauncher() {
-        this.motorLauncher.setPower(1);
+    public void startLauncher(double pow) {
+        this.motorLauncher.setPower(pow);
     }
     public void stopLauncher() {
         this.motorLauncher.setPower(0);
@@ -191,6 +298,20 @@ public class RobotEx /*extends Robot*/ {
     }
 
     public double radsToMS(double rads){ return this.robotRadius * rads;  }
+
+    public void grab(){
+        this.servoArm.setPosition(0.1);
+        sleep(1100);
+    }
+    public void drop(){
+        this.servoArm.setPosition(1);
+        sleep(1100);
+    }
+    public void shoot(double t){
+        this.startIntake();
+        sleep(t);
+        this.stopIntake();
+    }
 
     public double[] vecRotate(double x, double y, double theta)
     {
@@ -324,6 +445,25 @@ public class RobotEx /*extends Robot*/ {
         this.motorRB.setMotorEnable();
         this.motorLF.setMotorEnable();
         this.motorRF.setMotorEnable();
+        this.motorLB.setTargetPosition(0);
+        this.motorRB.setTargetPosition(0);
+        this.motorLF.setTargetPosition(0);
+        this.motorRF.setTargetPosition(0);
+
+    }
+
+    public void dropArm(){
+        arm(-700);
+        sleep(500);
+        drop();
+        arm(0);
+    }
+    public void grabArm(){
+        arm(-700);
+        sleep(500);
+        grab();
+        sleep(200);
+        arm(0);
     }
 
     // in centimetri pe secunda cred
@@ -940,9 +1080,93 @@ public class RobotEx /*extends Robot*/ {
         }
     }
 
-    public void patinaj(double ang, double dist, double speed,double rspeed)
+    public void setTarget(int target)
+    {
+        this.motorRB.setTargetPosition(motorLB.getCurrentPosition() + target);
+        this.motorLF.setTargetPosition(motorLF.getCurrentPosition() + target);
+        this.motorRF.setTargetPosition(motorRB.getCurrentPosition() + target);
+        this.motorLB.setTargetPosition(motorRF.getCurrentPosition() + target);
+    }
+    public void driveOnFunction(int target)
+    {
+        this.resetMotors();
+        target = -target;
+        double speed = 0.368; //drq stie dc, nu ne atingem de ancient magic
+        double dist = 0;
+        target *= ki(13.7);//ki(52);
+
+        this.setTarget(target);
+
+        this.motorLB.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        this.motorLF.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        this.motorRB.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        this.motorRF.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+        double Target = (double)target;
+
+        // e^-x^4 is more square, thus we get more max speed time
+        speed = exp((-1)* Math.pow(((2/Target)*motorLB.getCurrentPosition() -  1),4));
+
+        this.setSpeed(speed);
+
+        while(this.motorRF.isBusy() && this.motorRB.isBusy() && this.motorLF.isBusy() && this.motorLB.isBusy() && this.opMode.isOpModeIsActive()){
+            speed = exp((-1)* Math.pow(((2/Target)*motorLB.getCurrentPosition() -  1),4));
+            //dist += speed;
+            this.setSpeed(speed);
+
+
+        }
+
+
+        this.mortusMotorus();
+        this.resetMotors();
+
+    }
+    public int CMtoEuler(double t)
+    {
+        return tatamiToEuler2((2*t)/119.4);
+    }
+    public int tatamiToEuler2(double t)
+    {
+        return (int)((100*t)/1.29166666);
+    }
+
+    public void resetMotors()
+    {
+        this.motorLB.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        this.motorLF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        this.motorRB.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        this.motorRF.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+        this.motorLB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        this.motorLF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        this.motorRB.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        this.motorRF.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    }
+    public void driveOnFn(int t)
     {
 
+        this.driveOnFunction(this.CMtoEuler(-1*t));
+    }
+
+    public void moveTest(double ang, double dist, double speed)
+    {
+        double[] f = vecRotate(speed*cos(Math.PI * ang / 180) ,speed*sin(Math.PI * ang / 180) , -this.getAng3() + 270);
+
+        if(dist > 0) {
+            this.setVelocity(10 * f[0] / 33.7, 10 * f[1] / 33.7, 1000 * (dist / speed));
+            this.posX += f[0];
+            this.posY += f[1];
+        }else{
+            this.setVelocity(-10 * f[0] / 33.7, -10 * f[1] / 33.7, 1000 * (-dist / speed));
+            this.posX -= f[0];
+            this.posY -= f[1];
+        }
+    }
+
+    public void patinaj(double ang, double dist, double speed,double rspeed)
+    {
+        this.episkey();
         double[] f = vecRotate(0 ,speed , 0);
         if(dist > 0) {
             ElapsedTime elapsedTime = new ElapsedTime();
@@ -968,6 +1192,8 @@ public class RobotEx /*extends Robot*/ {
             this.posX -= f[0];
             this.posY -= f[1];
         }
+
+        this.sectumsempera();
     }
 
     public void arm(int pos) {
@@ -979,12 +1205,61 @@ public class RobotEx /*extends Robot*/ {
 //                motorArm.setPower(-0.5);
 //            //}
 //        }else{
-            //while(opMode.isOpModeIsActive() && motorArm.isBusy()) {
-                motorArm.setPower(0.5);
-            //}
+        //while(opMode.isOpModeIsActive() && motorArm.isBusy()) {
+        motorArm.setPower(0.5);
         //}
-      //  motorArm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        while (opMode.isOpModeIsActive() && motorArm.isBusy()){}
-        motorArm.setMotorDisable();
+        //}
+        //  motorArm.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+//        while (opMode.isOpModeIsActive() && motorArm.isBusy()){}
+        //  motorArm.setMotorDisable();
+//        motorArm.setPower(0);
     }
+    public void arm() {
+        if(this.armpos == 1){
+            this.motorArm.setPower(0.25);
+            pause(1000/2);
+            this.motorArm.setPower(0);
+            this.armpos = 0;
+        }else{
+            this.motorArm.setPower(-0.35);
+            pause(1000/2);
+            this.motorArm.setPower(0);
+            this.armpos = 1;
+        }
+    }
+
+    public Position getPosVuforia(){
+        targetVisible = false;
+        for (VuforiaTrackable trackable : allTrackables) {
+            if (((VuforiaTrackableDefaultListener)trackable.getListener()).isVisible()) {
+                debug.addData("Visible Target", trackable.getName());
+                targetVisible = true;
+
+                OpenGLMatrix robotLocationTransform = ((VuforiaTrackableDefaultListener)trackable.getListener()).getUpdatedRobotLocation();
+                if (robotLocationTransform != null) {
+                    lastLocation = robotLocationTransform;
+                }
+                break;
+            }
+        }
+
+
+        VectorF translation = lastLocation.getTranslation();
+        debug.addData("Pos (in)", "{X, Y, Z} = %.1f, %.1f, %.1f",
+                translation.get(0) , translation.get(1) , translation.get(2) );
+        Position ret = new Position();
+        ret.x = translation.get(0)/10;
+        ret.y = translation.get(1)/10;
+        ret.z = translation.get(2)/10;
+
+        if(!targetVisible){
+            debug.addLine("Posible positional mismatch, tracking target not found!");
+        }
+
+        return ret;
+
+
+    }
+
+
 }
