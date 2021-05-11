@@ -163,13 +163,13 @@ public class ConceptVuforiaUltimateGoalNavigationWebcam extends LinearOpMode {
         VuforiaTrackable blueTowerGoalTarget = targetsUltimateGoal.get(0);
         blueTowerGoalTarget.setName("Blue Tower Goal Target");
         VuforiaTrackable redTowerGoalTarget = targetsUltimateGoal.get(1);
-        redTowerGoalTarget.setName("Red Tower Goal Target");
+        redTowerGoalTarget.setName("Red Tower Goal Target");//asta
         VuforiaTrackable redAllianceTarget = targetsUltimateGoal.get(2);
-        redAllianceTarget.setName("Red Alliance Target");
+        redAllianceTarget.setName("Red Alliance Target");//asta
         VuforiaTrackable blueAllianceTarget = targetsUltimateGoal.get(3);
-        blueAllianceTarget.setName("Blue Alliance Target");
+        blueAllianceTarget.setName("Blue Alliance Target");//asta
         VuforiaTrackable frontWallTarget = targetsUltimateGoal.get(4);
-        frontWallTarget.setName("Front Wall Target");
+        frontWallTarget.setName("Front Wall Target");//asta
 
         // For convenience, gather together all the trackable objects in one easily-iterable collection */
         List<VuforiaTrackable> allTrackables = new ArrayList<VuforiaTrackable>();
